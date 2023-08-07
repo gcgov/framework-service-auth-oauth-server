@@ -585,7 +585,7 @@ class auth
 					break;
 			}
 
-			header( 'Location: ' . config::getEnvironmentConfig()->redirectAfterLoginUrl . '?errorMessage=' . urlencode( $message ) );
+			header( 'Location: ' . config::getEnvironmentConfig()->jwtAuth->redirectAfterLoginUrl . '?errorMessage=' . urlencode( $message ) );
 			exit;
 		}
 
@@ -605,7 +605,7 @@ class auth
 				addIfNotExisting: false);
 		}
 		catch( modelException $e ) {
-			header( 'Location: ' . config::getEnvironmentConfig()->redirectAfterLoginUrl . '?errorMessage=' . urlencode( $e->getMessage() ) );
+			header( 'Location: ' . config::getEnvironmentConfig()->jwtAuth->redirectAfterLoginUrl . '?errorMessage=' . urlencode( $e->getMessage() ) );
 			exit;
 		}
 
@@ -626,7 +626,7 @@ class auth
 			session_destroy();
 		}
 
-		header( 'Location: ' . config::getEnvironmentConfig()->redirectAfterLoginUrl . '?code=' . urlencode( (string)$authorizationCode->_id ) . $appendState );
+		header( 'Location: ' . config::getEnvironmentConfig()->jwtAuth->redirectAfterLoginUrl . '?code=' . urlencode( (string)$authorizationCode->_id ) . $appendState );
 		exit;
 	}
 
