@@ -248,7 +248,7 @@ class auth
 		}
 
 		//route
-		if( $postData[ 'grant_type' ]=='password' && config::getAppConfig()->settings->enablePasswordAuthRoutes ) {
+		if( $postData[ 'grant_type' ]=='password' ) {
 			return new controllerDataResponse( $this->password() );
 		}
 		elseif( $postData[ 'grant_type' ]=='refresh_token' ) {
@@ -432,8 +432,7 @@ class auth
 
 		//lookup auth code
 		try {
-			/** @var \gcgov\framework\services\mongodb\models\auth\userAuthorizationCode $userAuthorizationCode */
-			$userAuthorizationCode = \gcgov\framework\services\mongodb\models\auth\userAuthorizationCode::getOne( $postData[ 'code' ] );
+			$userAuthorizationCode = \gcgov\framework\services\jwtAuth\models\userAuthorizationCode::getOne( $postData[ 'code' ] );
 		}
 		catch( modelException $e ) {
 			throw new controllerException( 'Invalid code', 401 );
@@ -441,7 +440,7 @@ class auth
 
 		try {
 			$userClassName = \gcgov\framework\services\request::getUserClassFqdn();
-			/** @var \gcgov\framework\services\mongodb\models\auth\user $user */
+			/** @var \gcgov\framework\interfaces\auth\user $user */
 			$user = $userClassName::getOne( $userAuthorizationCode->userId );
 		}
 		catch( modelException $e ) {
@@ -517,18 +516,13 @@ class auth
 					]
 				],
 				'MicrosoftGraph' => [
-					'enabled' => true,
-					'keys'    => [
+					'enabled'   => true,
+					'keys'      => [
 						'id'     => config::getEnvironmentConfig()->microsoft->clientId,
 						'secret' => config::getEnvironmentConfig()->microsoft->clientSecret
 					],
-					'tenant'  => config::getEnvironmentConfig()->microsoft->tenant,
-					//					'endpoints' => [
-					//						'api_base_url' => 'https://login.microsoftonline.com/89535794-b398-47e9-9a76-1805684761e6/v2.0',
-					//						'authorize_url' => 'https://login.microsoftonline.com/'.config::getEnvironmentConfig()->microsoft->tenant.'/oauth2/v2.0/authorize',
-					//						'access_token_url' => 'https://login.microsoftonline.com/'.config::getEnvironmentConfig()->microsoft->tenant.'/oauth2/v2.0/token',
-					//					],
-					'scope'   => 'openid offline_access profile email'
+					'tenant'    => config::getEnvironmentConfig()->microsoft->tenant,
+					'scope'     => 'openid offline_access profile email User.Read'
 				],
 			]
 		];
@@ -597,12 +591,12 @@ class auth
 			$userClassName = \gcgov\framework\services\request::getUserClassFqdn();
 			/** @var \gcgov\framework\interfaces\auth\user $user */
 			$user = $userClassName::getFromOauth(
-				email:         $oauthProfile->email,
-				oauthId:       $oauthProfile->identifier,
-				oauthProvider: $provider,
-				firstName:     $oauthProfile->firstName,
-				lastName:      $oauthProfile->lastName,
-				addIfNotExisting: false);
+				email:            $oauthProfile->email,
+				externalId:       $oauthProfile->identifier,
+				externalProvider: $provider,
+				firstName:        $oauthProfile->firstName,
+				lastName:         $oauthProfile->lastName,
+				addIfNotExisting: false );
 		}
 		catch( modelException $e ) {
 			header( 'Location: ' . config::getEnvironmentConfig()->jwtAuth->redirectAfterLoginUrl . '?errorMessage=' . urlencode( $e->getMessage() ) );
@@ -610,8 +604,8 @@ class auth
 		}
 
 		try {
-			$authorizationCode = new \gcgov\framework\services\mongodb\models\auth\userAuthorizationCode( $user->_id, new \DateInterval( 'PT5M' ) );
-			\gcgov\framework\services\mongodb\models\auth\userAuthorizationCode::save( $authorizationCode );
+			$authorizationCode = new \gcgov\framework\services\jwtAuth\models\userAuthorizationCode( $user->_id, new \DateInterval( 'PT5M' ) );
+			\gcgov\framework\services\jwtAuth\models\userAuthorizationCode::save( $authorizationCode );
 		}
 		catch( modelException $e ) {
 			throw new controllerException( $provider . 'Server failed to generate an access code.', 500, $e );
@@ -667,6 +661,5 @@ class auth
 
 		return new controllerDataResponse( $tokenFilePath );
 	}
-
 
 }
