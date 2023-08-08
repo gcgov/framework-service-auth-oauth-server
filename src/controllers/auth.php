@@ -370,7 +370,7 @@ class auth
 		}
 
 		try {
-			\gcgov\framework\services\mongodb\models\auth\userRefreshToken::removeOutdatedRefreshTokens();
+			\gcgov\framework\services\jwtAuth\models\userRefreshToken::removeOutdatedRefreshTokens();
 		}
 		catch( modelException $e ) {
 			throw new controllerException( 'Failed to remove outdated refresh token', 500 );
