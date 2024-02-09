@@ -599,7 +599,7 @@ class auth
 				externalProvider: $provider,
 				firstName:        $oauthProfile->firstName,
 				lastName:         $oauthProfile->lastName,
-				addIfNotExisting: $oauthConfig->isBlockNewUsers(),
+				addIfNotExisting: !$oauthConfig->isBlockNewUsers(),
 				rolesForNewUser: $oauthConfig->getDefaultNewUserRoles() );
 		}
 		catch( modelException $e ) {
