@@ -8,6 +8,7 @@ use gcgov\framework\exceptions\modelException;
 use gcgov\framework\interfaces\controller;
 use gcgov\framework\models\controllerDataResponse;
 use gcgov\framework\services\authoauth\models\stdAuthResponse;
+use gcgov\framework\services\authoauth\oauthConfig;
 use gcgov\framework\services\formatting;
 use gcgov\framework\services\log;
 
@@ -588,6 +589,8 @@ class auth
 		}
 
 		try {
+			$oauthConfig = oauthConfig::getInstance();
+
 			$userClassName = \gcgov\framework\services\request::getUserClassFqdn();
 			/** @var \gcgov\framework\interfaces\auth\user $user */
 			$user = $userClassName::getFromOauth(
@@ -596,7 +599,8 @@ class auth
 				externalProvider: $provider,
 				firstName:        $oauthProfile->firstName,
 				lastName:         $oauthProfile->lastName,
-				addIfNotExisting: false );
+				addIfNotExisting: $oauthConfig->isBlockNewUsers(),
+				rolesForNewUser: $oauthConfig->getDefaultNewUserRoles() );
 		}
 		catch( modelException $e ) {
 			header( 'Location: ' . config::getEnvironmentConfig()->jwtAuth->redirectAfterLoginUrl . '?errorMessage=' . urlencode( $e->getMessage() ) );
