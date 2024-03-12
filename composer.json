@@ -13,6 +13,6 @@
 		"hybridauth/hybridauth": "^3.10",
 		"lcobucci/jwt": "^4.0",
 		"lcobucci/clock": "^2.0",
-		"andrewsauder/json-deserialize": "^2.4.2"
+		"andrewsauder/json-deserialize": "^2.5"
 	}
 }
