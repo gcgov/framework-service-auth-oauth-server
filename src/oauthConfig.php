@@ -4,6 +4,7 @@ namespace gcgov\framework\services\authoauth;
 
 class oauthConfig {
 
+	private array $authorizeUrlParameters = [];
 	private bool $blockNewUsers = true;
 
 	/** @var string[] $defaultNewUserRoles  */
@@ -72,6 +73,16 @@ class oauthConfig {
 
 	public function getDefaultNewUserRoles(): array {
 		return $this->defaultNewUserRoles;
+	}
+
+
+	public function getAuthorizeUrlParameters(): array {
+		return $this->authorizeUrlParameters;
+	}
+
+
+	public function setAuthorizeUrlParameters( array $authorizeUrlParameters ): void {
+		$this->authorizeUrlParameters = $authorizeUrlParameters;
 	}
 
 }

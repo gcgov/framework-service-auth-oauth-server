@@ -496,6 +496,8 @@ class auth
 			throw new controllerException( 'We do not currently support logging in with the service you provided', 400 );
 		}
 
+		$oauthConfig = oauthConfig::getInstance();
+
 		$config = [
 			//Location where to redirect users once they authenticate with a provider
 			'callback'  => config::getEnvironmentConfig()->getBaseUrl() . '/auth/hybridauth/' . $provider,
@@ -507,14 +509,16 @@ class auth
 					'keys'    => [
 						'id'     => '',
 						'secret' => ''
-					]
+					],
+					'authorize_url_parameters' => $oauthConfig->getAuthorizeUrlParameters()
 				],
 				'Facebook'       => [
 					'enabled' => false,
 					'keys'    => [
 						'id'     => '',
 						'secret' => ''
-					]
+					],
+					'authorize_url_parameters' => $oauthConfig->getAuthorizeUrlParameters()
 				],
 				'MicrosoftGraph' => [
 					'enabled'   => true,
@@ -523,7 +527,8 @@ class auth
 						'secret' => config::getEnvironmentConfig()->microsoft->clientSecret
 					],
 					'tenant'    => config::getEnvironmentConfig()->microsoft->tenant,
-					'scope'     => 'openid offline_access profile email User.Read'
+					'scope'     => 'openid offline_access profile email User.Read',
+					'authorize_url_parameters' => $oauthConfig->getAuthorizeUrlParameters()
 				],
 			]
 		];
@@ -589,8 +594,6 @@ class auth
 		}
 
 		try {
-			$oauthConfig = oauthConfig::getInstance();
-
 			$userClassName = \gcgov\framework\services\request::getUserClassFqdn();
 			/** @var \gcgov\framework\interfaces\auth\user $user */
 			$user = $userClassName::getFromOauth(
@@ -600,7 +603,7 @@ class auth
 				firstName:        $oauthProfile->firstName,
 				lastName:         $oauthProfile->lastName,
 				addIfNotExisting: !$oauthConfig->isBlockNewUsers(),
-				rolesForNewUser: $oauthConfig->getDefaultNewUserRoles() );
+				rolesForNewUser:  $oauthConfig->getDefaultNewUserRoles() );
 		}
 		catch( modelException $e ) {
 			header( 'Location: ' . config::getEnvironmentConfig()->jwtAuth->redirectAfterLoginUrl . '?errorMessage=' . urlencode( $e->getMessage() ) );
