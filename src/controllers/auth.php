@@ -2,13 +2,17 @@
 
 namespace gcgov\framework\services\authoauth\controllers;
 
+use andrewsauder\jsonDeserialize\exceptions\jsonDeserializeException;
 use gcgov\framework\config;
 use gcgov\framework\exceptions\controllerException;
 use gcgov\framework\exceptions\modelException;
 use gcgov\framework\interfaces\controller;
 use gcgov\framework\models\controllerDataResponse;
 use gcgov\framework\services\authoauth\models\stdAuthResponse;
+use gcgov\framework\services\authoauth\models\verifyMfaCodeRequest;
+use gcgov\framework\services\authoauth\models\verifyMfaSecretRequest;
 use gcgov\framework\services\authoauth\oauthConfig;
+use gcgov\framework\services\authoauth\services\multifactor;
 use gcgov\framework\services\formatting;
 use gcgov\framework\services\log;
 
@@ -18,9 +22,7 @@ use gcgov\framework\services\log;
  *     description="Standard auth access token/refresh response"
  * )
  */
-class auth
-	implements
-	controller {
+class auth implements controller {
 
 	/**
 	 * Processed after lifecycle is complete with this instance
@@ -279,36 +281,39 @@ class auth
 			throw new controllerException( 'Password required', 401 );
 		}
 
-		//authenticate user with citizen connect service
-
+		//authenticate the username and password combo
 		try {
 			$userClassName = \gcgov\framework\services\request::getUserClassFqdn();
-			$user          = $userClassName::verifyUsernamePassword( $postData[ 'username' ], $postData[ 'password' ] );
+			/** @var \gcgov\framework\services\mongodb\models\auth\user $user */
+			$user = $userClassName::verifyUsernamePassword( $postData[ 'username' ], $postData[ 'password' ] );
 		}
 		catch( modelException $e ) {
 			throw new controllerException( 'Incorrect username or password', 401, $e );
 		}
 
-		//create token for good user
 		$authUser = \gcgov\framework\services\request::getAuthUser();
-		$authUser->setFromUser( $user );
 
-		try {
+		//force configuration of MFA if required
+		if( $user->mfaRequired ) {
+
+			//lock the user roles down but give them an authentication token so that they can verify their MFA
+			$user->roles = [];
+			$authUser->setFromUser( $user );
+
 			$jwtService  = new \gcgov\framework\services\jwtAuth\jwtAuth();
 			$accessToken = $jwtService->createAccessToken( $authUser );
 
-			try {
-				$refreshToken = $jwtService->createRefreshToken( $authUser );
+			if( !$user->mfaConfigured ) {
+				return multifactor::configureMfaResponse( $user->_id, $accessToken );
 			}
-			catch( modelException $e ) {
-				throw new controllerException( 'Server failed to create refresh token', 500, $e );
+			else  {
+				return multifactor::requireMfaResponse( $accessToken, $user );
 			}
+		}
 
-			return new stdAuthResponse( $accessToken, $refreshToken );
-		}
-		catch( \Exception $e ) {
-			throw new controllerException( $e->getCode(), $e->getMessage(), $e );
-		}
+
+		//create token for valid user
+		return $this->createAccessTokenResponse( $user );
 	}
 
 
@@ -464,7 +469,6 @@ class auth
 		return new stdAuthResponse( $accessToken, $refreshToken );
 	}
 
-
 	/**
 	 * @throws \gcgov\framework\exceptions\controllerException
 	 */
@@ -505,29 +509,29 @@ class auth
 			//Providers specifics
 			'providers' => [
 				'Google'         => [
-					'enabled' => false,
-					'keys'    => [
+					'enabled'                  => false,
+					'keys'                     => [
 						'id'     => '',
 						'secret' => ''
 					],
 					'authorize_url_parameters' => $oauthConfig->getAuthorizeUrlParameters()
 				],
 				'Facebook'       => [
-					'enabled' => false,
-					'keys'    => [
+					'enabled'                  => false,
+					'keys'                     => [
 						'id'     => '',
 						'secret' => ''
 					],
 					'authorize_url_parameters' => $oauthConfig->getAuthorizeUrlParameters()
 				],
 				'MicrosoftGraph' => [
-					'enabled'   => true,
-					'keys'      => [
+					'enabled'                  => true,
+					'keys'                     => [
 						'id'     => config::getEnvironmentConfig()->microsoft->clientId,
 						'secret' => config::getEnvironmentConfig()->microsoft->clientSecret
 					],
-					'tenant'    => config::getEnvironmentConfig()->microsoft->tenant,
-					'scope'     => 'openid offline_access profile email User.Read',
+					'tenant'                   => config::getEnvironmentConfig()->microsoft->tenant,
+					'scope'                    => 'openid offline_access profile email User.Read',
 					'authorize_url_parameters' => $oauthConfig->getAuthorizeUrlParameters()
 				],
 			]
@@ -667,6 +671,73 @@ class auth
 		file_put_contents( $tokenFilePath, $token->toString() );
 
 		return new controllerDataResponse( $tokenFilePath );
+	}
+
+	private function createAccessTokenResponse( \gcgov\framework\interfaces\auth\user $user ): stdAuthResponse {
+		//create token for valid user
+		$authUser = \gcgov\framework\services\request::getAuthUser();
+		$authUser->setFromUser( $user );
+		try {
+			$jwtService  = new \gcgov\framework\services\jwtAuth\jwtAuth();
+			$accessToken = $jwtService->createAccessToken( $authUser );
+
+			try {
+				$refreshToken = $jwtService->createRefreshToken( $authUser );
+			}
+			catch( modelException $e ) {
+				throw new controllerException( 'Server failed to create refresh token', 500, $e );
+			}
+
+			return new stdAuthResponse( $accessToken, $refreshToken );
+		}
+		catch( \Exception $e ) {
+			throw new controllerException( $e->getCode(), $e->getMessage(), $e );
+		}
+	}
+
+	/**
+	 * @return \gcgov\framework\models\controllerDataResponse
+	 * @throws \gcgov\framework\exceptions\controllerException
+	 */
+	public function verifyMfaSecret(): controllerDataResponse {
+		$verifyMfaSecretRequestJSON = file_get_contents( 'php://input' );
+		try {
+			$verifyMfaSecretRequest = verifyMfaSecretRequest::jsonDeserialize( $verifyMfaSecretRequestJSON );
+		}
+		catch( jsonDeserializeException $e ) {
+			throw new controllerException( 'Provided data is not in a valid format', 400, $e );
+		}
+
+		$authUser = \gcgov\framework\services\request::getAuthUser();
+
+		$response = multifactor::verifyMfaSecret( new \MongoDB\BSON\ObjectId( $authUser->userId ), $verifyMfaSecretRequest->userMultifactorId, $verifyMfaSecretRequest->code );
+
+		$userClassName = \gcgov\framework\services\request::getUserClassFqdn();
+		return new controllerDataResponse( $this->createAccessTokenResponse( $userClassName::getOne($authUser->userId) ) );
+	}
+
+	/**
+	 * @return \gcgov\framework\models\controllerDataResponse
+	 * @throws \gcgov\framework\exceptions\controllerException
+	 */
+	public function verifyMfaCode(): controllerDataResponse {
+		$verifyMfaCodeRequestJSON = file_get_contents( 'php://input' );
+		try {
+			$verifyMfaCodeRequest = verifyMfaCodeRequest::jsonDeserialize( $verifyMfaCodeRequestJSON );
+		}
+		catch( jsonDeserializeException $e ) {
+			throw new controllerException( 'Provided data is not in a valid format', 400, $e );
+		}
+
+		$authUser = \gcgov\framework\services\request::getAuthUser();
+
+		$valid = multifactor::isMfaCodeCorrect( new \MongoDB\BSON\ObjectId( $authUser->userId ), $verifyMfaCodeRequest->code );
+		if(!$valid) {
+			throw new controllerException('Invalid code', 500);
+		}
+
+		$userClassName = \gcgov\framework\services\request::getUserClassFqdn();
+		return new controllerDataResponse( $this->createAccessTokenResponse( $userClassName::getOne($authUser->userId) ) );
 	}
 
 }

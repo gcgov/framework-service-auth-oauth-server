@@ -19,7 +19,10 @@ class router
 			new route( 'GET', config::getEnvironmentConfig()->getBasePath() . '/auth/out', '\gcgov\framework\services\authoauth\controllers\auth', 'out', true ),
 			new route( 'POST', config::getEnvironmentConfig()->getBasePath() . '/auth/authorize', '\gcgov\framework\services\authoauth\controllers\auth', 'oauthPostAuthorize', false ),
 			new route( 'GET', config::getEnvironmentConfig()->getBasePath() . '/auth/authorize', '\gcgov\framework\services\authoauth\controllers\auth', 'oauthGetAuthorize', false ),
-			new route( 'GET', config::getEnvironmentConfig()->getBasePath() . '/auth/hybridauth/{provider}', '\gcgov\framework\services\authoauth\controllers\auth', 'oauthHybridAuth', false )
+			new route( 'GET', config::getEnvironmentConfig()->getBasePath() . '/auth/hybridauth/{provider}', '\gcgov\framework\services\authoauth\controllers\auth', 'oauthHybridAuth', false ),
+
+			new route( 'POST', config::getEnvironmentConfig()->getBasePath() . '/auth/verifyMfaSecret', '\gcgov\framework\services\authoauth\controllers\auth', 'verifyMfaSecret', true ),
+			new route( 'POST', config::getEnvironmentConfig()->getBasePath() . '/auth/verifyMfaCode', '\gcgov\framework\services\authoauth\controllers\auth', 'verifyMfaCode', true ),
 		];
 	}
 
