@@ -20,6 +20,8 @@
         * Adds route `/auth/authorize` - GET and POST for authenticating user and generating access and refresh
           tokens
         * Adds route `/auth/hybridauth/{provider}` - Return endpoint for third party Oauth providers
+        * Adds route `/auth/verifyMfaSecret` - used to configure user by validating MFA code and saving MFA secret for user
+        * Adds route `/auth/verifyMfaCode` - for validating an MFA code for a user with MFA already configured
     * Adds authentication guard:
         * All routes in application with `authentication=true` must pass this guard. Checks the HTTP Authorization
           header,
