@@ -28,7 +28,7 @@ class configureMfaResponse extends stdAuthResponse {
 	public ?\MongoDB\BSON\ObjectId $userMultifactorId = null;
 
 
-	public function __construct( ?\Lcobucci\JWT\Token\Plain $accessToken = null, userMultifactor $userMultifactor, string $qrCodeDataUri = '' ) {
+	public function __construct( ?\Lcobucci\JWT\Token\Plain $accessToken, userMultifactor $userMultifactor, string $qrCodeDataUri = '' ) {
 		parent::__construct( $accessToken );
 		$this->qrCodeDataUri     = $qrCodeDataUri;
 		$this->secret            = $userMultifactor->secret;
