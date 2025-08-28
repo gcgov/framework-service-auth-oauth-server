@@ -13,7 +13,7 @@
 		"hybridauth/hybridauth": "3.11.*",
 		"lcobucci/jwt": "^4.0",
 		"lcobucci/clock": "^2.0",
-		"andrewsauder/json-deserialize": "^2.5",
+		"andrewsauder/json-deserialize": "^3.0",
 		"robthree/twofactorauth": "^3.0",
 		"bacon/bacon-qr-code": "^3.0",
 		"ext-mongodb": "*",
