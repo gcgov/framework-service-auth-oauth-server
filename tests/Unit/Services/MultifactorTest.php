@@ -89,6 +89,8 @@ final class MultifactorTest extends TestCase {
 			public function getEmail(): string { return ''; }
 			public function getRoles(): array { return []; }
 			public function getActive(): bool { return true; }
+			public function getMfaRequired(): bool { return $this->mfaRequired; }
+			public function getMfaConfigured(): bool { return $this->mfaConfigured; }
 			public static function getFromOauth( string $email, string $externalId, string $externalProvider, ?string $firstName = '', ?string $lastName = '', bool $addIfNotExisting = false, array $rolesForNewUser=[] ): self { throw new \BadMethodCallException(); }
 			public static function verifyUsernamePassword( string $username, string $password ): self { throw new \BadMethodCallException(); }
 			public static function getOneByExternalId( string $externalId ): self { throw new \BadMethodCallException(); }

@@ -45,6 +45,9 @@ class router
 		$jwtService = new \gcgov\framework\services\jwtAuth\jwtAuth();
 		try {
 			$parsedToken = $jwtService->validateAccessToken( $accessToken );
+			if( !( $parsedToken instanceof \Lcobucci\JWT\UnencryptedToken ) ) {
+				throw new routeException( 'Token parsing failed', 401 );
+			}
 
 			//token is valid
 			$tokenData   = $parsedToken->claims()->get( 'data' );
@@ -52,7 +55,7 @@ class router
 
 			//parse the authenticated user from the jwt
 			$authUser = \gcgov\framework\services\request::getAuthUser();
-			$authUser->setFromJwtToken( $tokenData, $tokenScopes );
+			$authUser->setFromJwtToken( is_array( $tokenData ) ? $tokenData : [], $tokenScopes );
 		}
 		catch( serviceException $e ) {
 			//JWT uses invalid kid/guid

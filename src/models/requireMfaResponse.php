@@ -17,8 +17,8 @@ class requireMfaResponse extends stdAuthResponse {
 	public function __construct( ?\Lcobucci\JWT\Token\Plain $accessToken = null, ?\gcgov\framework\interfaces\auth\user $user = null ) {
 		parent::__construct( $accessToken );
 		if($user!==null) {
-			$this->mfaRequired   = $user->mfaRequired;
-			$this->mfaConfigured = $user->mfaConfigured;
+			$this->mfaRequired   = $user->getMfaRequired();
+			$this->mfaConfigured = $user->getMfaConfigured();
 		}
 	}
 

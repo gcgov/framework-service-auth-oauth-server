@@ -189,53 +189,11 @@ class auth implements controller {
 
 
 	/**
-	 * @OA\Post(
-	 *     path="/auth/authorize",
-	 *     tags={"Auth"},
-	 *     description="Handler for third party oauth provider (authorization_code), exchange refresh tokens (refresh_token), and exchange username/password (password)",
-	 *     @OA\RequestBody(
-	 *          @OA\MediaType(
-	 *              mediaType="multipart/form-data",
-	 *              encoding={}
-	 *              @OA\Schema(
-	 *                  type="object",
-	 *                  @OA\Property(
-	 *                      property="grant_type",
-	 *                      description="action to perform"
-	 *                      @OA\Schema(type="string", enum={"password", "refresh_token", "authorization_code"})
-	 *                  ),
-	 *                  @OA\Property(
-	 *                      property="client_id",
-	 *                      description="must match app config guid"
-	 *                      @OA\Schema(type="string")
-	 *                  ),
-	 *                  @OA\Property(
-	 *                      property="scope",
-	 *                      description="Required if grant_type=password; Must be 'login'"
-	 *                      @OA\Schema(type="string")
-	 *                  ),
-	 *                  @OA\Property(
-	 *                      property="username",
-	 *                      description="Required if grant_type=password"
-	 *                      @OA\Schema(type="string")
-	 *                  ),
-	 *                  @OA\Property(
-	 *                      property="password",
-	 *                      description="Required if grant_type=password"
-	 *                      @OA\Schema(type="string")
-	 *                  )
-	 *              )
-	 *          )
-	 *     ),
-	 *     @OA\Response(
-	 *      response="200",
-	 *      description="Successfully fetched",
-	 *      @OA\JsonContent(
-	 *          type="array",
-	 *          @OA\Items(ref="#/components/schemas/stdAuthResponse")
-	 *      )
-	 *    )
-	 * )
+	 * Handler for third party oauth provider (authorization_code), exchange
+	 * refresh tokens (refresh_token), and exchange username/password
+	 * (password). OpenAPI documentation for this endpoint is provided in the
+	 * stdAuthResponse schema and the README; the inline @OA annotations were
+	 * removed because the malformed nested structure broke phpDoc parsing.
 	 *
 	 * @return \gcgov\framework\models\controllerDataResponse
 	 * @throws \gcgov\framework\exceptions\controllerException
@@ -332,7 +290,7 @@ class auth implements controller {
 	 */
 	public function out(): controllerDataResponse {
 		//unset the session variables
-		if( isset( $_SESSION ) && is_array( $_SESSION ) ) {
+		if( isset( $_SESSION ) ) {
 			foreach( $_SESSION as $key => $value ) {
 				unset( $_SESSION[ $key ] );
 			}
@@ -615,7 +573,9 @@ class auth implements controller {
 		}
 
 		try {
-			$authorizationCode = new \gcgov\framework\services\jwtAuth\models\userAuthorizationCode( $user->_id, new \DateInterval( 'PT5M' ) );
+			$userIdRaw = $user->getId();
+			$userIdObject = $userIdRaw instanceof \MongoDB\BSON\ObjectId ? $userIdRaw : new \MongoDB\BSON\ObjectId( (string) $userIdRaw );
+			$authorizationCode = new \gcgov\framework\services\jwtAuth\models\userAuthorizationCode( $userIdObject, new \DateInterval( 'PT5M' ) );
 			\gcgov\framework\services\jwtAuth\models\userAuthorizationCode::save( $authorizationCode );
 		}
 		catch( modelException $e ) {
