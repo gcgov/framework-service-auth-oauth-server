@@ -14,7 +14,7 @@ class verifyMfaSecretRequest extends \andrewsauder\jsonDeserialize\jsonDeseriali
 	public ?\MongoDB\BSON\ObjectId $userMultifactorId = null;
 
 
-	public function __construct( string $code = '', \MongoDB\BSON\ObjectId $userMultifactorId = null ) {
+	public function __construct( string $code = '', ?\MongoDB\BSON\ObjectId $userMultifactorId = null ) {
 		$this->code              = $code;
 		$this->userMultifactorId = $userMultifactorId;
 	}
