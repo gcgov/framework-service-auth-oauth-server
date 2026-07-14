@@ -10,7 +10,7 @@
 	},
 	"require": {
 		"php": ">=8.2",
-		"hybridauth/hybridauth": "3.11.*",
+		"hybridauth/hybridauth": "^3.13",
 		"lcobucci/jwt": "^5.6",
 		"lcobucci/clock": "^2.0",
 		"andrewsauder/json-deserialize": "^3.0",
