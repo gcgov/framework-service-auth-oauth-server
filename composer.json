@@ -10,7 +10,7 @@
 	},
 	"require": {
 		"php": ">=8.2",
-		"hybridauth/hybridauth": "3.11.*",
+		"hybridauth/hybridauth": "^3.13",
 		"lcobucci/jwt": "^5.6",
 		"lcobucci/clock": "^2.0",
 		"andrewsauder/json-deserialize": "^3.0",
@@ -27,7 +27,7 @@
 		"gcgov/framework": "dev-main"
 	},
 	"repositories": [
-		{ "type": "path", "url": "c:/inetpub/www/packages/framework", "options": { "symlink": false } }
+		{ "type": "path", "url": "../framework*", "options": { "symlink": true } }
 	],
 	"scripts": {
 		"phpstan": "phpstan analyse --memory-limit=512M",
