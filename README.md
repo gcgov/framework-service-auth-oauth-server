@@ -52,3 +52,43 @@ roles that a new user should be assigned at creation, provide the roles to the `
 $oauthConfig = oauthConfig::getInstance();
 $oauthConfig->setBlockNewUsers( false, [ 'Role1.Read', 'Role2.Read', 'Role2.Write' ] );
 ```
+
+## Refresh token rotation
+
+The `refresh_token` grant (`controllers\auth::refresh_token()`) performs **single-use rotation**:
+every successful exchange **deletes** the presented refresh token
+(`jwtAuth::deleteRefreshToken()`) and issues a brand new one
+(`jwtAuth::createRefreshToken()`). A given refresh token is therefore valid for exactly one
+exchange.
+
+### Known limitation — concurrent / duplicate presentation (future consideration)
+
+Because a refresh token is deleted the instant it is used, presenting the **same** refresh token a
+second time fails validation in `jwtAuth::validateRefreshToken()` — the backing `userRefreshToken`
+row is gone, so `validateRefreshTokenIdentity()` throws and the endpoint returns
+`401 "Refresh token invalid"`. This is a correct response to a *replayed* token, but under normal
+operation a client can end up replaying a token it still believes is current:
+
+* **Multiple app contexts sharing one persisted token** — e.g. two browser tabs/windows of the same
+  SPA. Both load the same stored refresh token; whichever refreshes first rotates it and deletes the
+  old row, and the other context's next refresh presents the now-deleted token.
+* **An interrupted or retried exchange** — the server rotates successfully (old token deleted, new
+  token created) but the response is lost before the client persists the new token (navigation,
+  reload, network blip, client-side retry). The client's next attempt replays the deleted token.
+
+Both surface to the user as a spurious forced sign-out even though they held what was, moments
+earlier, a valid token.
+
+The **client** can avoid most of this by serializing refresh across contexts (e.g. the Web Locks
+API) and re-reading the freshest persisted token before exchanging — see the note in
+`gcgov/framework` `jwtAuth`, and the reference implementation in the DMR front end
+(`user.store.ts` — `exchangeRefreshToken()`).
+
+A **server-side** hardening worth considering here in the future is **rotation with a short reuse
+grace window** (a.k.a. refresh-token reuse detection): instead of hard-deleting on rotation, mark
+the old row as rotated (record its successor + a `rotatedAt`) and, for a brief window, accept a
+just-rotated token by returning its already-issued successor rather than a `401`. That absorbs the
+benign concurrent/duplicate cases while still letting a genuinely reused-after-grace token signal
+possible theft (at which point the whole token family can be revoked). This is deliberately **not**
+implemented today — it changes the security model for every app on the framework and should be a
+considered decision, not a silent default.

@@ -324,6 +324,18 @@ class auth implements controller {
 
 
 	/**
+	 * Exchange a refresh token for a fresh access + refresh token pair.
+	 *
+	 * NOTE: this is single-use rotation — the presented refresh token is deleted
+	 * (deleteRefreshToken) and a new one issued (createRefreshToken) on every
+	 * successful exchange. Presenting the same token twice therefore returns
+	 * 401 "Refresh token invalid", which can happen benignly when two app
+	 * contexts share one persisted token (e.g. two browser tabs) or when an
+	 * exchange is interrupted/retried after the server already rotated. Clients
+	 * should serialize refresh and re-read the freshest persisted token; a
+	 * server-side rotation grace window / reuse detection is a possible future
+	 * hardening. See README "Refresh token rotation".
+	 *
 	 * @throws \gcgov\framework\exceptions\controllerException
 	 */
 	private function refresh_token(): stdAuthResponse {
